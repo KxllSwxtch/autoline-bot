@@ -750,7 +750,7 @@ def get_insurance_total():
     try:
         # Запускаем WebDriver
         driver.get(url)
-        time.sleep(2)
+        time.sleep(3)
 
         try:
             report_accident_el = driver.find_element(

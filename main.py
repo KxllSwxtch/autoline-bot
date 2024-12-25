@@ -31,6 +31,8 @@ PROXY_PORT = "8000"
 PROXY_USER = "B01vby"
 PROXY_PASS = "GBno0x"
 
+CALCULATE_CAR_TEXT = "Рассчитать Автомобиль"
+
 http_proxy = f"http://{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}"
 
 proxy = {
@@ -97,8 +99,7 @@ admins = [7311593407, 728438182]
 #             car_id SERIAL PRIMARY KEY,
 #             date TEXT NOT NULL,
 #             engine_volume TEXT NOT NULL,
-#             price TEXT NOT NULL,
-#             UNIQUE (date, engine_volume, price)
+#             price TEXT NOT NULL
 #         )
 #         """
 #     )
@@ -159,7 +160,7 @@ admins = [7311593407, 728438182]
 #     cursor.execute(
 #         """
 #         SELECT * FROM user_stats
-#         WHERE join_date >= %s AND join_date < %s
+#         WHERE join_date >= %s AND join_date <b %s
 #         """,
 #         (last_friday, next_friday),
 #     )
@@ -251,24 +252,21 @@ def get_currency_rates():
     response = requests.get(url)
     data = response.json()
 
-    # Получаем курсы валют
-    eur = data["Valute"]["EUR"]["Value"]
-    usd = data["Valute"]["USD"]["Value"]
-    krw = data["Valute"]["KRW"]["Value"] / data["Valute"]["KRW"]["Nominal"]
-    cny = data["Valute"]["CNY"]["Value"]
+    eur = data["Valute"]["EUR"]["Value"] + (data["Valute"]["EUR"]["Value"] * 0.2)
+    usd = data["Valute"]["USD"]["Value"] + (data["Valute"]["USD"]["Value"] * 0.2)
+    krw = (
+        data["Valute"]["KRW"]["Value"] + (data["Valute"]["KRW"]["Value"] * 0.2)
+    ) / data["Valute"]["KRW"]["Nominal"]
+    cny = data["Valute"]["CNY"]["Value"] + (data["Valute"]["CNY"]["Value"] * 0.2)
 
-    # Сохраняем глобально usd
     usd_rate = usd
 
-    # Форматируем текст
     rates_text = (
-        f"EUR {eur:.4f} ₽\n"
-        f"USD {usd:.4f} ₽\n"
-        f"KRW {krw:.4f} ₽\n"
-        f"CNY {cny:.4f} ₽"
+        f"EUR: <b>{eur:.2f} ₽</b>\n"
+        f"USD: <b>{usd:.2f} ₽</b>\n"
+        f"KRW: <b>{krw:.2f} ₽</b>\n"
+        f"CNY: <b>{cny:.2f} ₽</b>"
     )
-
-    print_message(rates_text)
 
     return rates_text
 
@@ -288,7 +286,9 @@ def cbr_command(message):
         )
 
         # Отправляем сообщение с курсами и клавиатурой
-        bot.send_message(message.chat.id, rates_text, reply_markup=keyboard)
+        bot.send_message(
+            message.chat.id, rates_text, reply_markup=keyboard, parse_mode="HTML"
+        )
     except Exception as e:
         bot.send_message(
             message.chat.id, "Не удалось получить курсы валют. Попробуйте позже."
@@ -306,7 +306,7 @@ def currencyrates_command(message):
 def main_menu():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     keyboard.add(
-        types.KeyboardButton("Расчёт"),
+        types.KeyboardButton(CALCULATE_CAR_TEXT),
         types.KeyboardButton("Написать менеджеру"),
         types.KeyboardButton("О нас"),
         types.KeyboardButton("Telegram-канал"),
@@ -324,7 +324,7 @@ def send_welcome(message):
 
     welcome_message = (
         f"Здравствуйте, {user_first_name}!\n\n"
-        "Я бот компании AutoLine Korea. Я помогу вам расчитать стоимость понравившегося вам автомобиля из Южной Кореи до Владивостока\n\n"
+        "Я бот компании AutoLine. Я помогу вам расчитать стоимость понравившегося вам автомобиля из Южной Кореи до Владивостока\n\n"
         "Выберите действие из меню ниже"
     )
     bot.send_message(message.chat.id, welcome_message, reply_markup=main_menu())
@@ -471,7 +471,7 @@ def get_car_info(url):
                 )
             )
             button.click()
-            time.sleep(2)
+            time.sleep(1)
 
             content = driver.find_element(
                 By.CLASS_NAME,
@@ -589,7 +589,7 @@ def calculate_cost(link, message):
         )
         keyboard.add(
             types.InlineKeyboardButton(
-                "ссчитать стоимость другого автомобиля",
+                "Рассчитать стоимость другого автомобиля",
                 callback_data="calculate_another",
             )
         )
@@ -663,7 +663,7 @@ def calculate_cost(link, message):
         total_cost = (
             int(grand_total) - int(recycling_fee) - int(duty_cleaning)
         ) + 110000
-        total_cost_formatted = format_number(total_cost)
+        total_cost_formatted = format_number(total_cost + (total_cost * 0.2))
         price_formatted = format_number(price)
         current_rub_krw_rate = (
             json_response.get("result", {}).get("rates", {}).get("rub", 0)
@@ -676,7 +676,8 @@ def calculate_cost(link, message):
             f"Возраст автомобиля: {age_formatted}\n"
             f"Стоимость в Южной Корее (в корейских вонах): {price_formatted} ₩\n"
             f"Объём двигателя: {engine_volume_formatted}\n\n"
-            f"Стоимость автомобиля под ключ до Владивостока: \n<b>{total_cost_formatted}₽</b>\n\n"
+            f"Стоимость автомобиля под ключ до Владивостока на текущий момент: \n<b>{total_cost_formatted}₽</b>\n"
+            f"Так же принимаем оплату по <b>USDT</b>.\nДля более подробной информации напишите нашему менеджеру @kbr_maisky07\n\n"
             f"Текущий курс рубля к корейской воне: \n<b>{current_rub_krw_rate} ₩</b>\n"
             f"Для просмотра текущего курса ЦБ нажмите сюда /cbr \n\n"
             f"🔗 <a href='{preview_link}'>Ссылка на автомобиль</a>\n\n"
@@ -687,24 +688,22 @@ def calculate_cost(link, message):
         # Клавиатура с дальнейшими действиями
         keyboard = types.InlineKeyboardMarkup()
         keyboard.add(
-            types.InlineKeyboardButton(
-                "Подробный разбор затрат", callback_data="detail"
-            )
+            types.InlineKeyboardButton("Детали расчёта", callback_data="detail")
         )
         keyboard.add(
             types.InlineKeyboardButton(
-                "Проверка на выплаты по ДТП",
+                "Выплаты по ДТП",
                 callback_data="technical_report",
             )
         )
         keyboard.add(
             types.InlineKeyboardButton(
-                "Связаться с менеджером", url="https://t.me/@kbr_maisky07"
+                "Написать менеджеру", url="https://t.me/@kbr_maisky07"
             )
         )
         keyboard.add(
             types.InlineKeyboardButton(
-                "Рассчитать стоимость другого автомобиля",
+                "Расчёт другого автомобиля",
                 callback_data="calculate_another",
             )
         )
@@ -829,6 +828,7 @@ def handle_callback_query(call):
             f"Доставка до Владивостока: <b>{delivery_fee_formatted} ₽</b>\n\n"
             f"Экспотная декларация и логистика по Южной Корее: <b>{dealer_commission_formatted} ₽</b>\n\n"
             f"Единая таможенная ставка (ЕТС): <b>{russia_duty_formatted} ₽</b>\n\n"
+            f"<b>Доставку до вашего города уточняйте у менеджера @kbr_maisky07</b>\n\n"
         )
 
         # Inline buttons for further actions
@@ -945,7 +945,7 @@ def handle_message(message):
     user_message = message.text.strip()
 
     # Проверяем нажатие кнопки "Рассчитать автомобиль"
-    if user_message == "Расчитать автомобиль до Владивостока":
+    if user_message == CALCULATE_CAR_TEXT:
         bot.send_message(
             message.chat.id,
             "Пожалуйста, введите ссылку на автомобиль с сайта www.encar.com:",
@@ -981,8 +981,6 @@ def handle_message(message):
             f"Посетите наш Instagram: {instagram_link}",
             disable_web_page_preview=False,
         )
-
-    # Если сообщение не соответствует ни одному из условий
     else:
         bot.send_message(
             message.chat.id,

@@ -471,7 +471,7 @@ def get_car_info(url):
 
             price_el = driver.find_element(By.CLASS_NAME, "DetailLeadCase_point__vdG4b")
             car_price = re.sub(r"\D", "", price_el.text)
-            time.sleep(3)
+            time.sleep(2)
 
             button = WebDriverWait(driver, 2).until(
                 EC.element_to_be_clickable(
@@ -750,7 +750,7 @@ def get_insurance_total():
     try:
         # Запускаем WebDriver
         driver.get(url)
-        time.sleep(3)
+        time.sleep(2)
 
         try:
             report_accident_el = driver.find_element(

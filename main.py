@@ -665,6 +665,7 @@ def calculate_cost(link, message):
         ) + 110000
         total_cost_formatted = format_number(total_cost + (total_cost * 0.2))
         price_formatted = format_number(price)
+
         current_rub_krw_rate = (
             json_response.get("result", {}).get("rates", {}).get("rub", 0)
         )

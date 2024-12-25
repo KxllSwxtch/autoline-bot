@@ -709,7 +709,7 @@ def calculate_cost(link, message):
         )
         keyboard.add(
             types.InlineKeyboardButton(
-                "Написать менеджеру", url="https://t.me/@kbr_maisky07"
+                "Написать менеджеру", url="https://t.me/kbr_maisky07"
             )
         )
         keyboard.add(

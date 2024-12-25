@@ -252,12 +252,12 @@ def get_currency_rates():
     response = requests.get(url)
     data = response.json()
 
-    eur = data["Valute"]["EUR"]["Value"] + (data["Valute"]["EUR"]["Value"] * 0.2)
-    usd = data["Valute"]["USD"]["Value"] + (data["Valute"]["USD"]["Value"] * 0.2)
+    eur = data["Valute"]["EUR"]["Value"] + (data["Valute"]["EUR"]["Value"] * 0.02)
+    usd = data["Valute"]["USD"]["Value"] + (data["Valute"]["USD"]["Value"] * 0.02)
     krw = (
-        data["Valute"]["KRW"]["Value"] + (data["Valute"]["KRW"]["Value"] * 0.2)
+        data["Valute"]["KRW"]["Value"] + (data["Valute"]["KRW"]["Value"] * 0.02)
     ) / data["Valute"]["KRW"]["Nominal"]
-    cny = data["Valute"]["CNY"]["Value"] + (data["Valute"]["CNY"]["Value"] * 0.2)
+    cny = data["Valute"]["CNY"]["Value"] + (data["Valute"]["CNY"]["Value"] * 0.02)
 
     usd_rate = usd
 
@@ -663,7 +663,7 @@ def calculate_cost(link, message):
         total_cost = (
             int(grand_total) - int(recycling_fee) - int(duty_cleaning)
         ) + 110000
-        total_cost_formatted = format_number(total_cost + (total_cost * 0.2))
+        total_cost_formatted = format_number(total_cost + (total_cost * 0.02))
         price_formatted = format_number(price)
 
         current_rub_krw_rate = (

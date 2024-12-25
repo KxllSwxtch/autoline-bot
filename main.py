@@ -32,6 +32,7 @@ PROXY_USER = "B01vby"
 PROXY_PASS = "GBno0x"
 
 CALCULATE_CAR_TEXT = "Рассчитать Автомобиль"
+DEALER_COMMISSION = 0.02  # 2%
 
 http_proxy = f"http://{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}"
 
@@ -252,12 +253,19 @@ def get_currency_rates():
     response = requests.get(url)
     data = response.json()
 
-    eur = data["Valute"]["EUR"]["Value"] + (data["Valute"]["EUR"]["Value"] * 0.02)
-    usd = data["Valute"]["USD"]["Value"] + (data["Valute"]["USD"]["Value"] * 0.02)
+    eur = data["Valute"]["EUR"]["Value"] + (
+        data["Valute"]["EUR"]["Value"] * DEALER_COMMISSION
+    )
+    usd = data["Valute"]["USD"]["Value"] + (
+        data["Valute"]["USD"]["Value"] * DEALER_COMMISSION
+    )
     krw = (
-        data["Valute"]["KRW"]["Value"] + (data["Valute"]["KRW"]["Value"] * 0.02)
+        data["Valute"]["KRW"]["Value"]
+        + (data["Valute"]["KRW"]["Value"] * DEALER_COMMISSION)
     ) / data["Valute"]["KRW"]["Nominal"]
-    cny = data["Valute"]["CNY"]["Value"] + (data["Valute"]["CNY"]["Value"] * 0.02)
+    cny = data["Valute"]["CNY"]["Value"] + (
+        data["Valute"]["CNY"]["Value"] * DEALER_COMMISSION
+    )
 
     usd_rate = usd
 
@@ -663,7 +671,9 @@ def calculate_cost(link, message):
         total_cost = (
             int(grand_total) - int(recycling_fee) - int(duty_cleaning)
         ) + 110000
-        total_cost_formatted = format_number(total_cost + (total_cost * 0.02))
+        total_cost_formatted = format_number(
+            total_cost + (total_cost * DEALER_COMMISSION)
+        )
         price_formatted = format_number(price)
 
         current_rub_krw_rate = (
@@ -816,7 +826,8 @@ def handle_callback_query(call):
         }
 
         car_price_formatted = format_number(
-            int(details["car_price_korea"]) + (int(details["car_price_korea"] * 0.02))
+            int(details["car_price_korea"])
+            + (int(details["car_price_korea"] * DEALER_COMMISSION))
         )
         dealer_fee_formatted = format_number(35000)
         delivery_fee_formatted = format_number((750 * usd_rate) + 10000)

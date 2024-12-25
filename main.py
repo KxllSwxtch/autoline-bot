@@ -815,7 +815,9 @@ def handle_callback_query(call):
             "delivery": car_data.get("result")["price"]["russian"]["delivery"]["rub"],
         }
 
-        car_price_formatted = format_number(details["car_price_korea"])
+        car_price_formatted = format_number(
+            int(details["car_price_korea"]) + (int(details["car_price_korea"] * 0.02))
+        )
         dealer_fee_formatted = format_number(35000)
         delivery_fee_formatted = format_number((750 * usd_rate) + 10000)
         dealer_commission_formatted = format_number(

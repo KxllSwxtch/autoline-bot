@@ -72,6 +72,7 @@ total_car_price = 0
 usd_rate = 0
 users = set()
 admins = [7311593407, 728438182]
+car_month = None
 
 
 # Инициализируем БД
@@ -437,7 +438,7 @@ def create_driver():
 
 
 def get_car_info(url):
-    global car_id_external
+    global car_id_external, car_month
 
     driver = create_driver()
 
@@ -491,6 +492,8 @@ def get_car_info(url):
             car_date = splitted_content[5]
             year = re.sub(r"\D", "", car_date.split(" ")[0])
             month = re.sub(r"\D", "", car_date.split(" ")[1])
+            car_month = month
+
             formatted_car_date = f"01{month}{year}"
 
             print_message(
@@ -528,7 +531,7 @@ def get_car_info(url):
 
 # Function to calculate the total cost
 def calculate_cost(link, message):
-    global car_data, car_id_external
+    global car_data, car_id_external, car_month
 
     print_message("ЗАПРОС НА РАСЧЁТ АВТОМОБИЛЯ")
 
@@ -569,6 +572,7 @@ def calculate_cost(link, message):
     if car_from_db:
         # Автомобиль найден в БД, используем данные
         date, engine_volume, price = car_from_db
+        car_month = date[2:4]
         print(
             f"Автомобиль найден в базе данных: {car_id}, {date}, {engine_volume}, {price}"
         )
@@ -611,7 +615,6 @@ def calculate_cost(link, message):
     if new_url:
         try:
             response = requests.get(new_url)
-            response.raise_for_status()
             json_response = response.json()
         except requests.RequestException as e:
             logging.error(f"Ошибка при запросе данных: {e}")
@@ -635,7 +638,6 @@ def calculate_cost(link, message):
         result = json_response.get("result", {})
         car = result.get("car", {})
         price = result.get("price", {}).get("car", {}).get("krw", 0)
-
         year = car.get("date", "").split()[-1] if "date" in car else None
 
         engine_volume_raw = car.get("engineVolume", None)
@@ -652,7 +654,7 @@ def calculate_cost(link, message):
 
         # Форматирование данных
         engine_volume_formatted = f"{format_number(int(engine_volume))} cc"
-        age_formatted = calculate_age(year)
+        age_formatted = calculate_age(year, car_month)
 
         grand_total = result.get("price", {}).get("grandTotal", 0)
         recycling_fee = (
@@ -687,7 +689,7 @@ def calculate_cost(link, message):
             f"Возраст автомобиля: {age_formatted}\n"
             f"Стоимость в Южной Корее (в корейских вонах): {price_formatted} ₩\n"
             f"Объём двигателя: {engine_volume_formatted}\n\n"
-            f"Стоимость автомобиля под ключ до Владивостока на текущий момент: <b>{total_cost_formatted}₽</b>\n\n"
+            f"Стоимость автомобиля под ключ до Владивостока на текущий момент: <b>{total_cost_formatted} ₽</b>\n\n"
             f"Так же принимаем оплату по <b>USDT</b>.\nДля более подробной информации напишите нашему менеджеру @kbr_maisky07\n\n"
             f"Текущий курс рубля к корейской воне: \n<b>{current_rub_krw_rate} ₩</b>\n"
             f"Для просмотра текущего курса ЦБ нажмите сюда /cbr \n\n"
@@ -1003,13 +1005,20 @@ def handle_message(message):
 
 
 # Utility function to calculate the age category
-def calculate_age(year):
-    current_year = datetime.datetime.now().year
-    age = current_year - int(year)
+def calculate_age(year, month):
+    # Убираем ведущий ноль у месяца, если он есть
+    month = int(month.lstrip("0")) if isinstance(month, str) else int(month)
 
-    if age < 3:
+    current_date = datetime.datetime.now()
+    car_date = datetime.datetime(year=int(year), month=month, day=1)
+
+    age_in_months = (
+        (current_date.year - car_date.year) * 12 + current_date.month - car_date.month
+    )
+
+    if age_in_months < 36:
         return f"До 3 лет"
-    elif 3 <= age < 5:
+    elif 36 <= age_in_months < 60:
         return f"от 3 до 5 лет"
     else:
         return f"от 5 лет"

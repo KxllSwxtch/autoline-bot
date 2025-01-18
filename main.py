@@ -836,7 +836,10 @@ def handle_callback_query(call):
         dealer_commission_formatted = format_number(
             int(details["dealer_commission"]) + 30000
         )
-        russia_duty_formatted = format_number(details["russiaDuty"])
+        recycling_fee_formatted = format_number(details["recycle_fee"])
+        russia_duty_formatted = format_number(
+            int(details["russiaDuty"]) - int(details["recycle_fee"])
+        )
 
         detail_message = (
             f"Стоимость авто: <b>{car_price_formatted} ₽</b>\n\n"
@@ -844,6 +847,7 @@ def handle_callback_query(call):
             f"Доставка до Владивостока: <b>{delivery_fee_formatted} ₽</b>\n\n"
             f"Экспотная декларация и логистика по Южной Корее: <b>{dealer_commission_formatted} ₽</b>\n\n"
             f"Единая таможенная ставка (ЕТС): <b>{russia_duty_formatted} ₽</b>\n\n"
+            f"Утилизационный сбор: <b>{recycling_fee_formatted} ₽</b>\n\n"
             f"<b>Доставку до вашего города уточняйте у менеджера @kbr_maisky07</b>\n\n"
         )
 

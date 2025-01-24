@@ -438,95 +438,66 @@ def create_driver():
 
 
 def get_car_info(url):
-    global car_id_external, car_month
+    global car_id_external
 
-    driver = create_driver()
+    # driver = create_driver()
 
     car_id_match = re.findall(r"\d+", url)
     car_id = car_id_match[0]
     car_id_external = car_id
 
-    try:
-        # solver = TwoCaptcha("89a8f41a0641f085c8ca6e861e0fa571")
+    url = f"https://api.encar.com/v1/readside/vehicle/{car_id}"
 
-        is_recaptcha_solved = True
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Referer": "http://www.encar.com/",
+        "Cache-Control": "max-age=0",
+        "Connection": "keep-alive",
+    }
 
-        driver.get(url)
-        time.sleep(3)
+    response = requests.get(url, headers=headers).json()
 
-        # if "reCAPTCHA" in driver.page_source:
-        #     is_recaptcha_solved = False
-        #     print_message("Обнаружена reCAPTCHA, решаем...")
+    # Получаем все необходимые данные по автомобилю
+    car_price = str(response["advertisement"]["price"])
+    car_date = response["category"]["yearMonth"]
+    year = car_date[2:4]
+    month = car_date[4:]
+    car_engine_displacement = str(response["spec"]["displacement"])
+    car_type = response["spec"]["bodyName"]
 
-        #     sitekey = extract_sitekey(driver, url)
-        #     print(f"Sitekey: {sitekey}")
+    # Форматируем
+    formatted_car_date = f"01{month}{year}"
+    formatted_car_type = "crossover" if car_type == "SUV" else "sedan"
 
-        #     result = solver.recaptcha(sitekey, url)
-        #     print(f'reCAPTCHA result: {result["code"][0:50]}...')
+    print_message(
+        f"ID: {car_id}\nType: {formatted_car_type}\nDate: {formatted_car_date}\nCar Engine Displacement: {car_engine_displacement}\nPrice: {car_price} KRW"
+    )
 
-        #     is_recaptcha_solved = send_recaptcha_token(result["code"])
+    # Сохранение данных в базу
+    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO car_info (car_id, date, engine_volume, price, car_type)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (car_id) DO NOTHING
+        """,
+        (
+            car_id,
+            formatted_car_date,
+            car_engine_displacement,
+            car_price,
+            formatted_car_type,
+        ),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print("Автомобиль был сохранён в базе данных")
 
-        if is_recaptcha_solved:
-            # Достаём данные об авто после решения капчи
-            car_date, car_price, car_engine_displacement, car_title = "", "", "", ""
+    new_url = f"https://plugin-back-versusm.amvera.io/car-ab-korea/{car_id}?price={car_price}&date={formatted_car_date}&volume={car_engine_displacement}"
 
-            price_el = driver.find_element(By.CLASS_NAME, "DetailLeadCase_point__vdG4b")
-            car_price = re.sub(r"\D", "", price_el.text)
-            time.sleep(2)
-
-            button = WebDriverWait(driver, 2).until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "//button[contains(text(), '자세히')]")
-                )
-            )
-            button.click()
-            time.sleep(1)
-
-            content = driver.find_element(
-                By.CLASS_NAME,
-                "BottomSheet-module_bottom_sheet__LeljN",
-            )
-            splitted_content = content.text.split("\n")
-            car_engine_displacement = re.sub(r"\D", "", splitted_content[9])
-
-            car_date = splitted_content[5]
-            year = re.sub(r"\D", "", car_date.split(" ")[0])
-            month = re.sub(r"\D", "", car_date.split(" ")[1])
-            car_month = month
-
-            formatted_car_date = f"01{month}{year}"
-
-            print_message(
-                f"{car_id}\n{car_title}\nRegistration Date: {formatted_car_date}\nEngine Displacement: {car_engine_displacement}\nPrice: {car_price} KRW"
-            )
-
-            # Сохранение данных в базу
-            conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO car_info (car_id, date, engine_volume, price)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (car_id) DO NOTHING
-                """,
-                (car_id, formatted_car_date, car_engine_displacement, car_price),
-            )
-            conn.commit()
-            cursor.close()
-            conn.close()
-            print("Автомобиль был сохранён в базе данных")
-
-            new_url = f"https://plugin-back-versusm.amvera.io/car-ab-korea/{car_id}?price={car_price}&date={formatted_car_date}&volume={car_engine_displacement}"
-
-            driver.quit()
-            return [new_url, car_title]
-
-    except WebDriverException as e:
-        print(f"Ошибка Selenium: {e}")
-        driver.quit()
-        return ["", "Произошла ошибка получения данных..."]
-
-    return ["", ""]
+    return [new_url, ""]
 
 
 # Function to calculate the total cost

@@ -1,16 +1,5 @@
-import time
-import psycopg2
-import re
-
-from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from main import create_driver, print_message
-
-
 def get_car_info(url):
-    global car_id_external
+    global car_id_external, car_month
 
     driver = create_driver()
 
@@ -44,7 +33,7 @@ def get_car_info(url):
 
             price_el = driver.find_element(By.CLASS_NAME, "DetailLeadCase_point__vdG4b")
             car_price = re.sub(r"\D", "", price_el.text)
-            time.sleep(3)
+            time.sleep(2)
 
             button = WebDriverWait(driver, 2).until(
                 EC.element_to_be_clickable(
@@ -52,7 +41,7 @@ def get_car_info(url):
                 )
             )
             button.click()
-            time.sleep(2)
+            time.sleep(1)
 
             content = driver.find_element(
                 By.CLASS_NAME,
@@ -64,6 +53,8 @@ def get_car_info(url):
             car_date = splitted_content[5]
             year = re.sub(r"\D", "", car_date.split(" ")[0])
             month = re.sub(r"\D", "", car_date.split(" ")[1])
+            car_month = month
+
             formatted_car_date = f"01{month}{year}"
 
             print_message(

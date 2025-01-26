@@ -328,6 +328,8 @@ def main_menu():
 # Start command handler
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
+    get_currency_rates()
+
     user = message.from_user
     user_first_name = user.first_name
 
@@ -1006,6 +1008,5 @@ def format_number(number):
 # Run the bot
 if __name__ == "__main__":
     # initialize_db()
-    get_currency_rates()
     set_bot_commands()
     bot.polling(non_stop=True)

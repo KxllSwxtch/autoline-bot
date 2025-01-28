@@ -69,6 +69,7 @@ usd_rate = 0
 users = set()
 admins = [7311593407, 728438182]
 car_month = None
+car_year = None
 
 vehicle_id = None
 vehicle_no = None
@@ -439,7 +440,7 @@ def create_driver():
 
 
 def get_car_info(url):
-    global car_id_external, vehicle_no, vehicle_id
+    global car_id_external, vehicle_no, vehicle_id, car_year, car_month
 
     # driver = create_driver()
 
@@ -461,8 +462,13 @@ def get_car_info(url):
     # Получаем все необходимые данные по автомобилю
     car_price = str(response["advertisement"]["price"])
     car_date = response["category"]["yearMonth"]
+
     year = car_date[2:4]
     month = car_date[4:]
+
+    car_year = year
+    car_month = month
+
     car_engine_displacement = str(response["spec"]["displacement"])
     car_type = response["spec"]["bodyName"]
 
@@ -502,12 +508,12 @@ def get_car_info(url):
 
     new_url = f"https://plugin-back-versusm.amvera.io/car-ab-korea/{car_id}?price={car_price}&date={formatted_car_date}&volume={car_engine_displacement}"
 
-    return [new_url, ""]
+    return [new_url, "", formatted_car_date]
 
 
 # Function to calculate the total cost
 def calculate_cost(link, message):
-    global car_data, car_id_external, car_month
+    global car_data, car_id_external, car_month, car_year
 
     print_message("ЗАПРОС НА РАСЧЁТ АВТОМОБИЛЯ")
 
@@ -569,7 +575,7 @@ def calculate_cost(link, message):
     #         return
 
     result = get_car_info(link)
-    new_url, car_title = result
+    new_url, car_title, formatted_car_date = result
 
     if not new_url and car_title:
         keyboard = types.InlineKeyboardMarkup()
@@ -617,12 +623,11 @@ def calculate_cost(link, message):
         result = json_response.get("result", {})
         car = result.get("car", {})
         price = result.get("price", {}).get("car", {}).get("krw", 0)
-        year = car.get("date", "").split()[-1] if "date" in car else None
 
         engine_volume_raw = car.get("engineVolume", None)
         engine_volume = re.sub(r"\D+", "", engine_volume_raw)
 
-        if not (year and engine_volume and price):
+        if not (car_year and engine_volume and price):
             logging.warning("Не удалось извлечь все необходимые данные из JSON.")
             bot.send_message(
                 message.chat.id,
@@ -632,8 +637,9 @@ def calculate_cost(link, message):
             return
 
         # Форматирование данных
+        formatted_car_year = f"20{car_year}"
         engine_volume_formatted = f"{format_number(int(engine_volume))} cc"
-        age_formatted = calculate_age(year, car_month)
+        age_formatted = calculate_age(int(formatted_car_year), car_month)
 
         grand_total = result.get("price", {}).get("grandTotal", 0)
         recycling_fee = (
@@ -752,7 +758,7 @@ def get_insurance_total():
 
     except Exception as e:
         print(f"Произошла ошибка при получении данных: {e}")
-        return ["Ошибка при получении данных", ""]
+        return ["", ""]
 
 
 # Callback query handler

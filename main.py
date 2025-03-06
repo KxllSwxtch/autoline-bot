@@ -540,40 +540,6 @@ def calculate_cost(link, message):
         query_params = parse_qs(parsed_url.query)
         car_id = query_params.get("carid", [None])[0]
 
-    # Проверяем наличие автомобиля в базе данных
-    # conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    # cursor = conn.cursor()
-
-    # cursor.execute(
-    #     "SELECT date, engine_volume, price FROM car_info WHERE car_id = %s", (car_id,)
-    # )
-    # car_from_db = cursor.fetchone()
-    # new_url = ""
-    # car_title = ""
-
-    # if car_from_db:
-    #     # Автомобиль найден в БД, используем данные
-    #     date, engine_volume, price = car_from_db
-    #     car_month = date[2:4]
-    #     print(
-    #         f"Автомобиль найден в базе данных: {car_id}, {date}, {engine_volume}, {price}"
-    #     )
-    #     new_url = f"https://plugin-back-versusm.amvera.io/car-ab-korea/{car_id}?price={price}&date={date}&volume={engine_volume}"
-    # else:
-    #     print("Автомобиль не был найден в базе данных.")
-    #     # Автомобиля нет в базе, вызываем get_car_info
-    #     result = get_car_info(link)
-    #     new_url, car_title = result
-
-    #     if result is None:
-    #         print(f"Ошибка при вызове get_car_info для ссылки: {link}")
-    #         send_error_message(
-    #             message,
-    #             "🚫 Произошла ошибка при получении данных. Проверьте ссылку и попробуйте снова.",
-    #         )
-    #         bot.delete_message(message.chat.id, processing_message.message_id)
-    #         return
-
     result = get_car_info(link)
     new_url, car_title, formatted_car_date = result
 
@@ -655,9 +621,7 @@ def calculate_cost(link, message):
             .get("rub", 0)
         )
 
-        total_cost = (
-            int(grand_total) - int(recycling_fee) - int(duty_cleaning)
-        ) + 110000
+        total_cost = int(grand_total) + 110000
         total_cost_formatted = format_number(
             total_cost + (total_cost * DEALER_COMMISSION)
         )
@@ -806,9 +770,7 @@ def handle_callback_query(call):
             int(details["dealer_commission"]) + 30000
         )
         recycling_fee_formatted = format_number(details["recycle_fee"])
-        russia_duty_formatted = format_number(
-            int(details["russiaDuty"]) - int(details["recycle_fee"])
-        )
+        russia_duty_formatted = format_number(int(details["russiaDuty"]))
 
         detail_message = (
             f"Стоимость авто: <b>{car_price_formatted} ₽</b>\n\n"

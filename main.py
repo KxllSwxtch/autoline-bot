@@ -98,8 +98,14 @@ def get_currency_rates():
 
     print_message("ПОЛУЧАЕМ КУРС ЦБ")
 
-    url = "https://www.cbr-xml-daily.ru/daily_json.js"
-    response = requests.get(url)
+    url = "https://corsproxy.io/https://www.cbr-xml-daily.ru/daily_json.js"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en,ru;q=0.9,en-CA;q=0.8,la;q=0.7,fr;q=0.6,ko;q=0.5",
+    }
+
+    response = requests.get(url, headers=headers)
     data = response.json()
 
     eur = data["Valute"]["EUR"]["Value"] + (
@@ -455,24 +461,25 @@ def calculate_cost(link, message):
         engine_volume_formatted = f"{format_number(int(engine_volume))} cc"
         age_formatted = calculate_age(int(formatted_car_year), car_month)
 
-        grand_total = result.get("price", {}).get("grandTotal", 0)
-        recycling_fee = (
-            result.get("price", {})
+        total_cost = (
+            (
+                int(result.get("price", {}).get("russian", {}).get("total", 0))
+                + int(result.get("price", {}).get("car", {}).get("rub", 0))
+                + 120000
+            )
+            - result.get("price", {}).get("russian", {}).get("sbkts", 0).get("rub", 0)
+            - result.get("price", {})
             .get("russian", {})
-            .get("recyclingFee", {})
+            .get("svhAndExpertise", 0)
             .get("rub", 0)
-        )
-        duty_cleaning = (
-            result.get("price", {})
-            .get("korea", {})
-            .get("dutyCleaning", {})
+            - result.get("price", {})
+            .get("russian", {})
+            .get("transfer", 0)
             .get("rub", 0)
         )
 
-        total_cost = int(grand_total) + 110000
-        total_cost_formatted = format_number(
-            total_cost + (total_cost * DEALER_COMMISSION)
-        )
+        total_cost_formatted = format_number(total_cost)
+
         price_formatted = format_number(price)
 
         current_rub_krw_rate = (
@@ -622,7 +629,7 @@ def handle_callback_query(call):
 
         detail_message = (
             f"Стоимость авто: <b>{car_price_formatted} ₽</b>\n\n"
-            f"Услуги Брокера (СВХ, СБКТС): <b>{format_number(115000)} ₽</b>\n\n"
+            f"Услуги Брокера (СВХ, СБКТС): <b>{format_number(120000)} ₽</b>\n\n"
             f"Доставка до Владивостока: <b>{delivery_fee_formatted} ₽</b>\n\n"
             f"Экспотная декларация и логистика по Южной Корее: <b>{dealer_commission_formatted} ₽</b>\n\n"
             f"Единая таможенная ставка (ЕТС): <b>{russia_duty_formatted} ₽</b>\n\n"

@@ -67,7 +67,7 @@ car_id_external = ""
 total_car_price = 0
 usd_rate = 0
 users = set()
-admins = [7311593407, 728438182]
+admins = [728438182, 1481485185]
 car_month = None
 car_year = None
 
@@ -170,6 +170,9 @@ def main_menu():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     keyboard.add(
         types.KeyboardButton(CALCULATE_CAR_TEXT),
+        types.KeyboardButton("Изменить курс (для менеджера)"),
+    )
+    keyboard.add(
         types.KeyboardButton("Написать менеджеру"),
         types.KeyboardButton("О нас"),
         types.KeyboardButton("Telegram-канал"),
@@ -461,10 +464,20 @@ def calculate_cost(link, message):
         engine_volume_formatted = f"{format_number(int(engine_volume))} cc"
         age_formatted = calculate_age(int(formatted_car_year), car_month)
 
+        # Получаем курс рубля к воне до расчёта
+        current_rub_krw_rate = float(
+            json_response.get("result", {}).get("rates", {}).get("rub", 0)
+        )
+        current_rub_krw_rate = current_rub_krw_rate + (
+            current_rub_krw_rate * DEALER_COMMISSION
+        )
+
         total_cost = (
             (
                 int(result.get("price", {}).get("russian", {}).get("total", 0))
                 + int(result.get("price", {}).get("car", {}).get("rub", 0))
+                + (1200000 / current_rub_krw_rate)  # конвертация с воны на рубль
+                + (1000000 / current_rub_krw_rate)  # конвертация с воны на рубль
                 + 120000
             )
             - result.get("price", {}).get("russian", {}).get("sbkts", 0).get("rub", 0)
@@ -478,14 +491,9 @@ def calculate_cost(link, message):
             .get("rub", 0)
         )
 
+        total_cost = total_cost + (total_cost * DEALER_COMMISSION)
         total_cost_formatted = format_number(total_cost)
-
         price_formatted = format_number(price)
-
-        current_rub_krw_rate = (
-            json_response.get("result", {}).get("rates", {}).get("rub", 0)
-        )
-
         preview_link = f"https://fem.encar.com/cars/detail/{car_id}"
 
         # Формирование сообщения результата
@@ -495,7 +503,7 @@ def calculate_cost(link, message):
             f"Объём двигателя: {engine_volume_formatted}\n\n"
             f"Стоимость автомобиля под ключ до Владивостока на текущий момент: <b>{total_cost_formatted} ₽</b>\n\n"
             f"Так же принимаем оплату по <b>USDT</b>.\nДля более подробной информации напишите нашему менеджеру @kbr_maisky07\n\n"
-            f"Текущий курс рубля к корейской воне: \n<b>{current_rub_krw_rate} ₩</b>\n"
+            f"Текущий курс рубля к корейской воне: \n<b>{format_number(current_rub_krw_rate)} ₩</b>\n"
             f"Для просмотра текущего курса ЦБ нажмите сюда /cbr \n\n"
             f"🔗 <a href='{preview_link}'>Ссылка на автомобиль</a>\n\n"
             f"Если данное авто попадает под санкции, пожалуйста уточните возможность отправки в вашу страну у менеджера @kbr_maisky07\n\n"
@@ -583,7 +591,7 @@ def get_insurance_total():
 # Callback query handler
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
-    global car_data, car_id_external, usd_rate
+    global car_data, car_id_external, usd_rate, current_rub_krw_rate
 
     if call.data.startswith("detail"):
         print_message("[ЗАПРОС] ДЕТАЛИЗАЦИЯ РАСЧËТА")
@@ -620,18 +628,20 @@ def handle_callback_query(call):
             + (int(details["car_price_korea"] * DEALER_COMMISSION))
         )
         dealer_fee_formatted = format_number(35000)
-        delivery_fee_formatted = format_number((750 * usd_rate) + 10000)
+        delivery_fee_formatted = format_number(
+            1200000 / current_rub_krw_rate
+        )  # конвертация с воны на рубль
         dealer_commission_formatted = format_number(
-            int(details["dealer_commission"]) + 30000
-        )
+            1000000 / current_rub_krw_rate
+        )  # конвертация с воны на рубль
         recycling_fee_formatted = format_number(details["recycle_fee"])
         russia_duty_formatted = format_number(int(details["russiaDuty"]))
 
         detail_message = (
             f"Стоимость авто: <b>{car_price_formatted} ₽</b>\n\n"
-            f"Услуги Брокера (СВХ, СБКТС): <b>{format_number(120000)} ₽</b>\n\n"
             f"Доставка до Владивостока: <b>{delivery_fee_formatted} ₽</b>\n\n"
-            f"Экспотная декларация и логистика по Южной Корее: <b>{dealer_commission_formatted} ₽</b>\n\n"
+            f"Услуги Брокера (СВХ, СБКТС): <b>{format_number(120000)} ₽</b>\n\n"
+            f"Документация и логистика по Корее: <b>{dealer_commission_formatted} ₽</b>\n\n"
             f"Единая таможенная ставка (ЕТС): <b>{russia_duty_formatted} ₽</b>\n\n"
             f"Утилизационный сбор: <b>{recycling_fee_formatted} ₽</b>\n\n"
             f"<b>Доставку до вашего города уточняйте у менеджера @kbr_maisky07</b>\n\n"
@@ -786,10 +796,42 @@ def handle_message(message):
             f"Посетите наш Instagram: {instagram_link}",
             disable_web_page_preview=False,
         )
+    elif user_message == "Изменить курс (для менеджера)":
+        if message.from_user.id in admins:
+            msg = bot.send_message(
+                message.chat.id,
+                "Введите новый процент комиссии (например, 2 для 2% или 5 для 5%):",
+            )
+            bot.register_next_step_handler(msg, process_commission_change)
+        else:
+            bot.send_message(
+                message.chat.id,
+                "У вас нет прав для изменения курса.",
+                reply_markup=main_menu(),
+            )
     else:
         bot.send_message(
             message.chat.id,
             "Пожалуйста, введите корректную ссылку на автомобиль с сайта www.encar.com или fem.encar.com.",
+        )
+
+
+# Добавленная функция для обработки изменения комиссии менеджером
+def process_commission_change(message):
+    global DEALER_COMMISSION
+    try:
+        new_percent = float(message.text.strip())
+        DEALER_COMMISSION = new_percent / 100.0
+        bot.send_message(
+            message.chat.id,
+            f"Комиссия обновлена до {new_percent}%",
+            reply_markup=main_menu(),
+        )
+    except ValueError:
+        bot.send_message(
+            message.chat.id,
+            "Ошибка: введите корректное число.",
+            reply_markup=main_menu(),
         )
 
 

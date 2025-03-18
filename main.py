@@ -66,6 +66,7 @@ car_data = {}
 car_id_external = ""
 total_car_price = 0
 usd_rate = 0
+current_rub_krw_rate = 0
 users = set()
 admins = [728438182, 1481485185]
 car_month = None
@@ -370,7 +371,7 @@ def get_car_info(url):
 
 # Function to calculate the total cost
 def calculate_cost(link, message):
-    global car_data, car_id_external, car_month, car_year
+    global car_data, car_id_external, car_month, car_year, current_rub_krw_rate
 
     print_message("ЗАПРОС НА РАСЧЁТ АВТОМОБИЛЯ")
 

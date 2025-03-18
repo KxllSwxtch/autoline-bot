@@ -365,6 +365,7 @@ def get_car_info(url):
     print("Автомобиль был сохранён в базе данных")
 
     new_url = f"https://plugin-back-versusm.amvera.io/car-ab-korea/{car_id}?price={car_price}&date={formatted_car_date}&volume={car_engine_displacement}"
+    print(new_url)
 
     return [new_url, "", formatted_car_date]
 
@@ -423,7 +424,13 @@ def calculate_cost(link, message):
     # Если есть новая ссылка
     if new_url:
         try:
-            response = requests.get(new_url)
+            response = requests.get(
+                new_url,
+                proxies=proxy,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
+                },
+            )
             json_response = response.json()
         except requests.RequestException as e:
             logging.error(f"Ошибка при запросе данных: {e}")
